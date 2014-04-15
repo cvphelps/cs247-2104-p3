@@ -11,9 +11,12 @@
     connect_webcam();
   });
 
+  var overlay = jQuery('<div id="overlay"> </div>');
+  overlay.appendTo(document.body);
+
   function connect_to_chat_firebase(){
     /* Include your Firebase link here!*/
-    fb_instance = new Firebase("https://gsroth-p3-v1.firebaseio.com");
+    fb_instance = new Firebase("https://zebra-p3.firebaseio.com");
 
     // generate new chatroom id or use existing id
     var url_segments = document.location.href.split("/#");
@@ -22,7 +25,7 @@
     }else{
       fb_chat_room_id = Math.random().toString(36).substring(7);
     }
-    display_msg({m:"Share this url with your friend to join this chat: "+ document.location.origin+"/#"+fb_chat_room_id,c:"red"})
+    display_msg({m:"Share this chat's url: "+ document.location.origin+"/#"+fb_chat_room_id,c:"red"})
 
     // set up variables to access firebase data structure
     var fb_new_chat_room = fb_instance.child('chatrooms').child(fb_chat_room_id);
@@ -39,9 +42,9 @@
     });
 
     // block until username is answered
-    var username = window.prompt("Welcome, warrior! please declare your name?");
+    var username = window.prompt("May I ask your name?");
     if(!username){
-      username = "anonymous"+Math.floor(Math.random()*1111);
+      username = "friend"+Math.floor(Math.random()*1111);
     }
     fb_instance_users.push({ name: username,c: my_color});
     $("#waiting").remove();
@@ -49,10 +52,30 @@
     // bind submission box
     $("#submission input").keydown(function( event ) {
       if (event.which == 13) {
-        if(has_emotions($(this).val())){
+        var input = $(this).val();
+        if(has_emotions(input)){
           fb_instance_stream.push({m:username+": " +$(this).val(), v:cur_video_blob, c: my_color});
         }else{
           fb_instance_stream.push({m:username+": " +$(this).val(), c: my_color});
+        }
+        if(has_happiness(input)){
+          $('#overlay').css({"background-color":"#e0ff9e"});
+          $('#conversation video').css({"background-color":"#e0ff9e"});
+          var inputbox = document.getElementById('inputbox');
+          var happiness_array = [
+            "Tell me more...",
+            "How does that make you feel?",
+            "Talk to me...",
+            "Keep it up...",
+            "Talk it out..."
+          ]
+          var randomNumber = Math.floor(Math.random()*happiness_array.length);
+          inputbox.placeholder = happiness_array[randomNumber];
+          /*$('#inputbox').css({"placeholder":"tell me more..."});*/
+        }
+        if(has_loneliness(input)){
+          $('#overlay').css({"background-color":"#66a2c4"});
+          $('#conversation video').css({"background-color":"#66a2c4"});
         }
         $(this).val("");
         scroll_to_bottom(0);
@@ -70,9 +93,10 @@
       // for video element
       var video = document.createElement("video");
       video.autoplay = true;
-      video.controls = false; // optional
+      //video.controls = false; // optional
       video.loop = true;
-      video.width = 120;
+      video.width = 500;
+      //video.color = #ea64d8; 
 
       var source = document.createElement("source");
       source.src =  URL.createObjectURL(base64_to_blob(data.v));
@@ -83,6 +107,10 @@
       // for gif instead, use this code below and change mediaRecorder.mimeType in onMediaSuccess below
       // var video = document.createElement("img");
       // video.src = URL.createObjectURL(base64_to_blob(data.v));
+
+      //$("#conversation").append("<div class='overlay' style='background-color:#3ac43a'></div>");
+      //document.getElementById("background-video").appendChild(video);
+
 
       document.getElementById("conversation").appendChild(video);
     }
@@ -99,7 +127,7 @@
     // we're only recording video, not audio
     var mediaConstraints = {
       video: true,
-      audio: false
+      audio: true
     };
 
     // callback for when we get video stream from user.
@@ -149,8 +177,8 @@
       };
       setInterval( function() {
         mediaRecorder.stop();
-        mediaRecorder.start(3000);
-      }, 3000 );
+        mediaRecorder.start(2000);
+      }, 2000 );
       console.log("connect to media stream!");
     }
 
@@ -166,6 +194,26 @@
   // check to see if a message qualifies to be replaced with video.
   var has_emotions = function(msg){
     var options = ["lol",":)",":("];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_loneliness = function(msg){
+    var options = ["lonely","loneliness","alone","awkward","isolated","distant","strange","weird","uncool"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_happiness = function(msg){
+    var options = ["lol",":)",":-)","yay","happy","good","smile","wonderful","lively","love","joy","pleasure","fortunate","grand","warm","sunny","enjoy","haha","omg","ermagerd","yuss","yiss","yes","better","recovering"];
     for(var i=0;i<options.length;i++){
       if(msg.indexOf(options[i])!= -1){
         return true;
@@ -199,5 +247,223 @@
     var blob = new Blob([view]);
     return blob;
   };
+
+})();
+
+
+// SKETCHY THING I'M TRYING TO DO WITH THE VIDEO STREAM
+(function() {
+  var video;
+  var copy;
+  var copycanvas;
+  var draw;
+
+  var TILE_WIDTH = 32;
+  var TILE_HEIGHT = 24;
+  var TILE_CENTER_WIDTH = 16;
+  var TILE_CENTER_HEIGHT = 12;
+  var SOURCERECT = {x:0, y:0, width:0, height:0};
+  var PAINTRECT = {x:0, y:0, width:1000, height:600};
+
+  function init(){
+    video = document.getElementById('#webcam_stream video');
+    copycanvas = document.getElementById('sourcecopy');
+    copy = copycanvas.getContext('2d');
+    var outputcanvas = document.getElementById('output');
+    draw = outputcanvas.getContext('2d');
+    setInterval("processFrame()", 33);
+  }
+  function createTiles(){
+    var offsetX = TILE_CENTER_WIDTH+(PAINTRECT.width-SOURCERECT.width)/2;
+    var offsetY = TILE_CENTER_HEIGHT+(PAINTRECT.height-SOURCERECT.height)/2;
+    var y=0;
+    while(y < SOURCERECT.height){
+      var x=0;
+      while(x < SOURCERECT.width){
+        var tile = new Tile();
+        tile.videoX = x;
+        tile.videoY = y;
+        tile.originX = offsetX+x;
+        tile.originY = offsetY+y;
+        tile.currentX = tile.originX;
+        tile.currentY = tile.originY;
+        tiles.push(tile);
+        x+=TILE_WIDTH;
+      }
+      y+=TILE_HEIGHT;
+    }
+  }
+
+  var RAD = Math.PI/180;
+  var randomJump = false;
+  var tiles = [];
+  var debug = false;
+  function processFrame(){
+    if(!isNaN(video.duration)){
+      if(SOURCERECT.width == 0){
+        SOURCERECT = {x:0,y:0,width:video.videoWidth,height:video.videoHeight};
+        createTiles();
+      }
+      //this is to keep my sanity while developing
+      if(randomJump){
+        randomJump = false;
+        video.currentTime = Math.random()*video.duration;
+      }
+      //loop
+      if(video.currentTime == video.duration){
+        video.currentTime = 0;
+      }
+    }
+    var debugStr = "";
+    //copy tiles
+    copy.drawImage(video, 0, 0);
+    draw.clearRect(PAINTRECT.x, PAINTRECT.y,PAINTRECT.width,PAINTRECT.height);
+    
+    for(var i=0; i<tiles.length; i++){
+      var tile = tiles[i];
+      if(tile.force > 0.0001){
+        //expand
+        tile.moveX *= tile.force;
+        tile.moveY *= tile.force;
+        tile.moveRotation *= tile.force;
+        tile.currentX += tile.moveX;
+        tile.currentY += tile.moveY;
+        tile.rotation += tile.moveRotation;
+        tile.rotation %= 360;
+        tile.force *= 0.9;
+        if(tile.currentX <= 0 || tile.currentX >= PAINTRECT.width){
+          tile.moveX *= -1;
+        }
+        if(tile.currentY <= 0 || tile.currentY >= PAINTRECT.height){
+          tile.moveY *= -1;
+        }
+      }else if(tile.rotation != 0 || tile.currentX != tile.originX || tile.currentY != tile.originY){
+        //contract
+        var diffx = (tile.originX-tile.currentX)*0.2;
+        var diffy = (tile.originY-tile.currentY)*0.2;
+        var diffRot = (0-tile.rotation)*0.2;
+        
+        if(Math.abs(diffx) < 0.5){
+          tile.currentX = tile.originX;
+        }else{
+          tile.currentX += diffx;
+        }
+        if(Math.abs(diffy) < 0.5){
+          tile.currentY = tile.originY;
+        }else{
+          tile.currentY += diffy;
+        }
+        if(Math.abs(diffRot) < 0.5){
+          tile.rotation = 0;
+        }else{
+          tile.rotation += diffRot;
+        }
+      }else{
+        tile.force = 0;
+      }
+      draw.save();
+      draw.translate(tile.currentX, tile.currentY);
+      draw.rotate(tile.rotation*RAD);
+      draw.drawImage(copycanvas, tile.videoX, tile.videoY, TILE_WIDTH, TILE_HEIGHT, -TILE_CENTER_WIDTH, -TILE_CENTER_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
+      draw.restore();
+    }
+    if(debug){
+      debug = false;
+      document.getElementById('trace').innerHTML = debugStr;
+    }
+  }
+
+  function explode(x, y){
+    for(var i=0; i<tiles.length; i++){
+      var tile = tiles[i];
+      
+      var xdiff = tile.currentX-x;
+      var ydiff = tile.currentY-y;
+      var dist = Math.sqrt(xdiff*xdiff + ydiff*ydiff);
+      
+      var randRange = 220+(Math.random()*30);
+      var range = randRange-dist;
+      var force = 3*(range/randRange);
+      if(force > tile.force){
+        tile.force = force;
+        var radians = Math.atan2(ydiff, xdiff);
+        tile.moveX = Math.cos(radians);
+        tile.moveY = Math.sin(radians);
+        tile.moveRotation = 0.5-Math.random();
+      }
+    }
+    tiles.sort(zindexSort);
+    processFrame();
+  }
+  function zindexSort(a, b){
+    return (a.force-b.force);
+  }
+
+  function dropBomb(evt, obj){
+    var posx = 0;
+    var posy = 0;
+    var e = evt || window.event;
+    if (e.pageX || e.pageY){
+      posx = e.pageX;
+      posy = e.pageY;
+    }else if (e.clientX || e.clientY) {
+      posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+      posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+    }
+    var canvasX = posx-obj.offsetLeft;
+    var canvasY = posy-obj.offsetTop;
+    explode(canvasX, canvasY);
+  }
+
+  function Tile(){
+    this.originX = 0;
+    this.originY = 0;
+    this.currentX = 0;
+    this.currentY = 0;
+    this.rotation = 0;
+    this.force = 0;
+    this.z = 0;
+    this.moveX= 0;
+    this.moveY= 0;
+    this.moveRotation = 0;
+    
+    this.videoX = 0;
+    this.videoY = 0;
+  }
+
+
+  /*
+    getPixel
+    return pixel object {r,g,b,a}
+  */
+  function getPixel(imageData, x, y){
+    var data = imageData.data;
+    var pos = (x + y * imageData.width) * 4;
+    return {r:data[pos], g:data[pos+1], b:data[pos+2], a:data[pos+3]}
+  }
+  /*
+    setPixel
+    set pixel object {r,g,b,a}
+  */
+  function setPixel(imageData, x, y, pixel){
+    var data = imageData.data;
+    var pos = (x + y * imageData.width) * 4;
+    data[pos] = pixel.r;
+    data[pos+1] = pixel.g;
+    data[pos+2] = pixel.b;
+    data[pos+3] = pixel.a;
+  }
+  /*
+    copyPixel
+    faster then using getPixel/setPixel combo
+  */
+  function copyPixel(sImageData, sx, sy, dImageData, dx, dy){
+    var spos = (sx + sy * sImageData.width) * 4;
+    var dpos = (dx + dy * dImageData.width) * 4;
+    dImageData.data[dpos] = sImageData.data[spos];     //R
+    dImageData.data[dpos+1] = sImageData.data[spos+1]; //G
+    dImageData.data[dpos+2] = sImageData.data[spos+2]; //B
+    dImageData.data[dpos+3] = sImageData.data[spos+3]; //A
+  }
 
 })();
