@@ -222,6 +222,18 @@
     return false;
   }
 
+  var has_excitement = function(msg){
+    var options = ["excite","cray","crazy","passionate","thrilled","amazed"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+
+
 
   // some handy methods for converting blob to base 64 and vice versa
   // for performance bench mark, please refer to http://jsperf.com/blob-base64-conversion/5
