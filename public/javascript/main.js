@@ -58,24 +58,54 @@
         }else{
           fb_instance_stream.push({m:username+": " +$(this).val(), c: my_color});
         }
-        if(has_happiness(input)){
-          $('#overlay').css({"background-color":"#e0ff9e"});
-          $('#conversation video').css({"background-color":"#e0ff9e"});
-          var inputbox = document.getElementById('inputbox');
-          var happiness_array = [
+        var placeholder_array = [
             "Tell me more...",
             "How does that make you feel?",
             "Talk to me...",
             "Keep it up...",
-            "Talk it out..."
+            "Talk it out...",
+            "Ok, go on...",
+            "More feelings...",
+            "I'm all about the feelings..."
           ]
-          var randomNumber = Math.floor(Math.random()*happiness_array.length);
-          inputbox.placeholder = happiness_array[randomNumber];
-          /*$('#inputbox').css({"placeholder":"tell me more..."});*/
-        }
+          var randomNumber = Math.floor(Math.random()*placeholder_array.length);
         if(has_loneliness(input)){
           $('#overlay').css({"background-color":"#66a2c4"});
           $('#conversation video').css({"background-color":"#66a2c4"});
+        }
+        if(has_happiness(input)){
+          $('#overlay').css({"background-color":"#e0ff9e"});
+          $('#conversation video').css({"background-color":"#e0ff9e"});
+          var inputbox = document.getElementById('inputbox');
+          inputbox.placeholder = placeholder_array[randomNumber];
+        }
+        if(has_excitement(input)){
+          $('#overlay').css({"background-color":"#f5c400"});
+          $('#conversation video').css({"background-color":"#f5c400"});
+        }
+        if(has_fear(input)){
+          $('#overlay').css({"background-color":"#cf2900"});
+          $('#conversation video').css({"background-color":"#cf2900"});
+        }
+        if(has_calm(input)){
+          $('#overlay').css({"background-color":"#0debff"});
+          $('#conversation video').css({"background-color":"#0debff"});
+        }
+        if(has_sadness(input)){
+          $('#overlay').css({"background-color":"#141f99"});
+          $('#conversation video').css({"background-color":"#141f99"});
+        }
+        if(has_anxiety(input)){
+          $('#overlay').css({"background-color":"#9cd900"});
+          $('#conversation video').css({"background-color":"#9cd900"});
+        }
+        if(has_idiot(input)){
+          $('#overlay').css({"background-color":"#804d00"});
+          $('#conversation video').css({"background-color":"#804d00"});
+        }
+        if(has_anger(input)){
+          $('#overlay').css({"background-color":"#ff003c"});
+          $('#conversation video').css({"background-color":"#ff003c"});
         }
         $(this).val("");
         scroll_to_bottom(0);
@@ -127,7 +157,7 @@
     // we're only recording video, not audio
     var mediaConstraints = {
       video: true,
-      audio: true
+      audio: false
     };
 
     // callback for when we get video stream from user.
@@ -193,12 +223,15 @@
 
   // check to see if a message qualifies to be replaced with video.
   var has_emotions = function(msg){
-    var options = ["lol",":)",":("];
+    if(has_loneliness(msg) || has_happiness(msg) || has_excitement(msg) || has_fear(msg) || has_calm(msg) || has_sadness(msg) || has_anxiety(msg) || has_idiot(msg) || has_anger(msg)){
+      return true;
+    }
+    /*var options = ["lol",":)",":("];
     for(var i=0;i<options.length;i++){
       if(msg.indexOf(options[i])!= -1){
         return true;
       }
-    }
+    }*/
     return false;
   }
 
@@ -242,6 +275,56 @@
     return false;
   }
 
+  var has_calm = function(msg){
+    var options = [":|","fine","ok","alright","calm","satisfied","meh","sure"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_sadness = function(msg){
+    var options = [":(",":/",":-(","sad","unhappy","upset","disappointed"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_anxiety = function(msg){
+    var options = [":{","*~*","^_^","nervous","unsure","anxious","anxiety","worried"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_anger = function(msg){
+    var options = ["angry","grumpy","furious","mad"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
+  var has_idiot = function(msg){
+    var options = ["8===>","boobz","4chan","/b"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
 
 
 
@@ -270,11 +353,11 @@
     return blob;
   };
 
-})();
+//})();
 
 
 // SKETCHY THING I'M TRYING TO DO WITH THE VIDEO STREAM
-(function() {
+//(function() {
   var video;
   var copy;
   var copycanvas;
@@ -288,7 +371,7 @@
   var PAINTRECT = {x:0, y:0, width:1000, height:600};
 
   function init(){
-    video = document.getElementById('#webcam_stream video');
+    video = document.getElementById('sourcevid');
     copycanvas = document.getElementById('sourcecopy');
     copy = copycanvas.getContext('2d');
     var outputcanvas = document.getElementById('output');
@@ -389,10 +472,6 @@
       draw.drawImage(copycanvas, tile.videoX, tile.videoY, TILE_WIDTH, TILE_HEIGHT, -TILE_CENTER_WIDTH, -TILE_CENTER_HEIGHT, TILE_WIDTH, TILE_HEIGHT);
       draw.restore();
     }
-    if(debug){
-      debug = false;
-      document.getElementById('trace').innerHTML = debugStr;
-    }
   }
 
   function explode(x, y){
@@ -452,7 +531,6 @@
     this.videoX = 0;
     this.videoY = 0;
   }
-
 
   /*
     getPixel
