@@ -232,6 +232,16 @@
     return false;
   }
 
+  var has_fear = function(msg){
+    var options = ["afraid","terrified","frightened"];
+    for(var i=0;i<options.length;i++){
+      if(msg.indexOf(options[i])!= -1){
+        return true;
+      }
+    }
+    return false;
+  }
+
 
 
 
